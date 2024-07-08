@@ -34,7 +34,7 @@ if st.button("Calculate"):
             vec2 = torch.tensor(vec2)
             dot_product = torch.dot(vec1, vec2).item()
             magnitude = torch.norm(vec1) * torch.norm(vec2)
-            return dot_product / magnitude if magnitude != 0 else 0
+            return dot_product / (magnitude + .2)
 
         similarity = cosine_similarity(embedding1, embedding2)
 
