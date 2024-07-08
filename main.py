@@ -1,57 +1,51 @@
-# text_similarity_project/app/main.py
-
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
+import streamlit as st
+import openai
+import numpy as np
 import torch
-from transformers import AutoTokenizer, AutoModel
 
-app = FastAPI()
+st.title("Text Similarity Checker")
 
-class Texts(BaseModel):
-    text1: str
-    text2: str
+# Set your OpenAI API key from environment variable
+openai.api_key = st.secrets["OPENAI_API_KEY"]
 
-# Load pretrained model and tokenizer
-tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
-model = AutoModel.from_pretrained("bert-base-uncased")
+text1 = st.text_area("Enter first text:")
+text2 = st.text_area("Enter second text:")
 
-# Adjusted similarity threshold
-SIMILARITY_THRESHOLD = 0.8  # Adjust this threshold as needed
+# Add a slider for similarity threshold
+SIMILARITY_THRESHOLD = st.slider("Similarity Threshold", 0.0, 1.0, 0.8, 0.05)
 
-@app.post("/compare_texts")
-def compare_texts(texts: Texts) -> bool:
+if st.button("Calculate"):
     try:
-        # Tokenize input texts
-        inputs1 = tokenizer(texts.text1, return_tensors="pt", padding=True, truncation=True)
-        inputs2 = tokenizer(texts.text2, return_tensors="pt", padding=True, truncation=True)
+        # Function to get embeddings from OpenAI
+        def get_embedding(text):
+            response = openai.Embedding.create(
+                input=text,
+                model="text-embedding-ada-002"  # Change to the desired model
+            )
+            return np.array(response['data'][0]['embedding'])
 
-        # Print tokenized inputs for debugging
-        print("Tokenized Inputs:")
-        print(inputs1)
-        print(inputs2)
-
-        # Ensure token IDs are different
-        if torch.equal(inputs1["input_ids"], inputs2["input_ids"]):
-            raise HTTPException(status_code=400, detail="Input texts result in identical token IDs.")
-
-        # Encode input texts
-        with torch.no_grad():
-            embeddings1 = model(**inputs1).last_hidden_state.mean(dim=1)
-            embeddings2 = model(**inputs2).last_hidden_state.mean(dim=1)
+        # Calculate embeddings
+        embedding1 = get_embedding(text1)
+        embedding2 = get_embedding(text2)
 
         # Calculate cosine similarity
-        similarity = cosine_similarity(embeddings1, embeddings2)
+        def cosine_similarity(vec1, vec2):
+            vec1 = torch.tensor(vec1)
+            vec2 = torch.tensor(vec2)
+            dot_product = torch.dot(vec1, vec2).item()
+            magnitude = torch.norm(vec1) * torch.norm(vec2)
+            return dot_product / magnitude if magnitude != 0 else 0
 
-        # Print similarity score for debugging
-        print("Similarity Score:", similarity.item())
+        similarity = cosine_similarity(embedding1, embedding2)
 
-        # Return similarity result based on adjusted threshold
-        return similarity.item() > SIMILARITY_THRESHOLD
-    
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error processing the request: {e}")
+        # Compare similarity with the threshold
+        if similarity > SIMILARITY_THRESHOLD:
+            st.write("true")
+        else:
+            st.write("false")
 
-def cosine_similarity(vec1, vec2):
-    dot_product = torch.dot(vec1.squeeze(), vec2.squeeze())
-    magnitude = torch.norm(vec1) * torch.norm(vec2)
-    return dot_product / magnitude if magnitude != 0 else 0
+    except openai.error.OpenAIError as e:
+        st.error(f"OpenAI API request failed: {e}")
+
+    except ValueError:
+        st.error("Invalid response from OpenAI API")
