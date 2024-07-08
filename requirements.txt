@@ -1,10 +1,4 @@
-fastapi
-pydantic
+streamlit
+openai==0.28
+numpy
 torch
-transformers
-requests
-uvicorn
-
-
-
-
