@@ -2,3 +2,6 @@ streamlit
 openai==0.28
 numpy
 torch
+requests
+urllib3
+pandas
