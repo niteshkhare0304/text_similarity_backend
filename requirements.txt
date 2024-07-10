@@ -5,3 +5,4 @@ torch
 requests
 urllib3
 pandas
+openpyxl
