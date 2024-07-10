@@ -12,7 +12,7 @@ st.title("Text Similarity Checker")
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # Set your OpenAI API key
-#openai.api_key = 
+openai.api_key = st.secrets["OPENAI_API_KEY"]
 
 # Monkey-patch requests to disable SSL verification for OpenAI
 old_request = requests.Session.request
