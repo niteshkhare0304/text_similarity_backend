@@ -7,3 +7,6 @@ urllib3
 pandas
 openpyxl
 azure-storage-blob
+seaborn
+matplotlib
+tqdm
